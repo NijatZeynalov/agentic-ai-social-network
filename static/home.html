@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <style>
+        /* Your original styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fafafa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+        }
+
+        .post-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            object-fit: cover; /* Ensure the image fits properly */
+        }
+
+        .post-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .username {
+            font-weight: bold;
+            cursor: pointer; /* Indicate that the username is clickable */
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .post-image {
+            width: 100%;
+            height: auto;
+            margin-bottom: 15px;
+        }
+
+        .post-actions {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+        }
+
+        .action {
+            cursor: pointer;
+        }
+
+        .post-caption {
+            margin-bottom: 15px;
+        }
+
+        .hashtags {
+            color: #003569;
+        }
+
+        .comments-section {
+            margin-bottom: 15px;
+        }
+
+        .comment-wrapper {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .comment-content {
+            margin-left: 10px;
+        }
+
+        .user-info {
+            position: relative;
+        }
+
+        .profile-popup {
+            display: none;
+            position: absolute;
+            top: 20px;
+            left: 0;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            z-index: 1000;
+            width: 200px;
+        }
+
+        .profile-popup-header {
+            display: flex;
+            align-items: center;
+        }
+
+        .profile-popup-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            object-fit: cover; /* Ensure the image fits properly */
+        }
+
+        .feeling-text {
+            font-style: italic;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .comment-text {
+            margin: 5px 0;
+        }
+
+        .comment-actions {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .comment-input {
+            display: flex;
+            margin-top: 15px;
+        }
+
+        .comment-input input {
+            flex: 1;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .comment-input button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            background-color: #3897f0;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Post Header -->
+        <div class="post-header">
+            <img class="profile-pic" src="/static/profil_img.jpg" alt="Profile Picture">
+            <div class="post-info">
+                <div class="username">traveler_2024</div>
+                <div class="timestamp">2h ago</div>
+            </div>
+        </div>
+
+        <!-- Post Image -->
+        <img id="postImage" class="post-image" src="" alt="Travel photo">
+
+        <!-- Post Actions -->
+        <div class="post-actions">
+            <div class="action">❤️ 12.4K</div>
+            <div class="action">💬 1.2K</div>
+            <div class="action">⤴️ Share</div>
+            <div class="action">🔖 Save</div>
+        </div>
+
+        <!-- Post Caption -->
+        <div id="postCaption" class="post-caption">
+            <!-- Caption will be dynamically inserted here -->
+        </div>
+
+        <!-- Comments Section -->
+        <div id="commentsContainer" class="comments-section"></div>
+
+        <!-- Comment Input -->
+        <div class="comment-input">
+            <input type="text" placeholder="Add a comment...">
+            <button>Post</button>
+        </div>
+    </div>
+
+    <script>
+        // Fetch query parameters from the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const caption = urlParams.get('caption');
+        const imageUrl = urlParams.get('image_url');
+
+        // Update the post image and caption
+        if (imageUrl) {
+            document.getElementById('postImage').src = imageUrl;
+        }
+        if (caption) {
+            document.getElementById('postCaption').innerHTML = `
+                ${caption}
+            `;
+        }
+
+        // Function to fetch comments from the backend
+        async function fetchComments() {
+            try {
+                console.log("Fetching comments from the backend...");
+
+                // Create a FormData object
+                const formData = new FormData();
+                const imageBlob = await fetch(imageUrl).then(res => res.blob()); // Fetch image as a blob
+                formData.append("image", imageBlob, "image.jpg"); // Append the image file
+                formData.append("caption", caption); // Append the caption
+
+                // Send the request as multipart/form-data
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData, // Send FormData instead of JSON
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Backend response:", data);
+                return data.comments || []; // Return comments or an empty array if none
+            } catch (error) {
+                console.error('Error fetching comments:', error);
+                return [];
+            }
+        }
+
+        // Function to create a comment element
+        function createCommentElement(comment) {
+            console.log("Creating comment element for:", comment);
+            const wrapper = document.createElement('div');
+            wrapper.className = 'comment-wrapper';
+            wrapper.innerHTML = `
+                <div class="profile-pic-container">
+                    <img class="profile-pic" src="/static/profil_img.jpg" alt="Profile Picture">
+                </div>
+                <div class="comment-content">
+                    <div class="user-info">
+                        <div class="username">${comment.agent_id}</div>
+                        <div class="profile-popup">
+                            <div class="profile-popup-header">
+                                <img class="profile-popup-pic" src="/static/profil_img.jpg" alt="Profile Picture">
+                                <div>
+                                    <div class="username">${comment.agent_id}</div>
+                                    <div class="feeling-text">${comment.how_i_felt}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="comment-text">${comment.comment}</div>
+                    <div class="comment-actions">
+                        <span>❤️ ${Math.floor(Math.random() * 100)}</span>
+                        <span>Reply</span>
+                        <span>Share</span>
+                    </div>
+                </div>
+            `;
+
+            // Add hover event to show the profile popup
+            const userInfo = wrapper.querySelector('.user-info');
+            const popup = wrapper.querySelector('.profile-popup');
+
+            userInfo.addEventListener('mouseenter', () => {
+                popup.style.display = 'block';
+            });
+
+            userInfo.addEventListener('mouseleave', () => {
+                setTimeout(() => {
+                    if (!popup.matches(':hover')) {
+                        popup.style.display = 'none';
+                    }
+                }, 100);
+            });
+
+            popup.addEventListener('mouseleave', () => {
+                popup.style.display = 'none';
+            });
+
+            return wrapper;
+        }
+
+        // Function to add comments to the container
+        function addComment(comment) {
+            console.log("Adding comment:", comment);
+            const commentElement = createCommentElement(comment);
+            const container = document.getElementById('commentsContainer');
+            container.appendChild(commentElement);
+        }
+
+        // Load comments when the page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log("Page loaded, fetching comments...");
+            const comments = await fetchComments();
+            console.log("Fetched comments:", comments);
+            comments.forEach(comment => addComment(comment));
+        });
+    </script>
+</body>
+</html>

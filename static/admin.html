@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Upload and Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: #000;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #121212;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input[type="file"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            background: #242424;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            background: #FE2C55;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #e62548;
+        }
+
+        .preview-container {
+            margin: 20px 0;
+            display: none;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #242424;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="margin-bottom: 20px;">Image Upload & Analysis</h1>
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="image">Select Image</label>
+                <input type="file" id="image" accept="image/*" required>
+            </div>
+            <div class="preview-container" id="previewContainer">
+                <img id="imagePreview" class="preview-image" alt="Preview">
+            </div>
+            <div class="form-group">
+                <label for="caption">Caption (optional)</label>
+                <textarea id="caption" placeholder="Write a caption..."></textarea>
+            </div>
+            <button type="submit">Post & Analyze</button>
+        </form>
+        <div id="loading" class="loading">Processing image...</div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Preview image
+        document.getElementById('image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').src = e.target.result;
+                    document.getElementById('previewContainer').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const image = document.getElementById('image').files[0];
+            const caption = document.getElementById('caption').value;
+
+            if (!image) {
+                alert('Please select an image');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('image', image);
+            formData.append('caption', caption);
+
+            try {
+                // Step 1: Send image and caption to /analyze
+                const analyzeResponse = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!analyzeResponse.ok) {
+                    throw new Error(`HTTP error! Status: ${analyzeResponse.status}`);
+                }
+
+                const analyzeResult = await analyzeResponse.json();
+
+                // Step 2: Redirect to home.html with query parameters
+                const queryParams = new URLSearchParams({
+                    description: analyzeResult.description,
+                    image_url: analyzeResult.image_url,
+                    recommended_agents: analyzeResult.recommended_agents.join(',')
+                });
+                window.location.href = `/home?${queryParams.toString()}`;
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred during analysis');
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
